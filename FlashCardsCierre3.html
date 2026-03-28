@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards de Redes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .flip-card {
+            background-color: transparent;
+            perspective: 1000px;
+            height: 350px;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .flip-card.flipped .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .flip-card-front {
+            background-color: #ffffff;
+            color: #1e293b;
+            border: 2px solid #e2e8f0;
+        }
+        .flip-card-back {
+            background-color: #3b82f6;
+            color: white;
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center py-10 px-4 font-sans">
+
+    <div class="max-w-2xl w-full">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">Flashcards de Estudio</h1>
+            <p class="text-slate-500">Protocolos, Modelo OSI y Cliente-Servidor</p>
+            <p class="text-slate-500">Actividad de Cierre 3</p>
+        </header>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-200 rounded-full h-2.5 mb-6">
+            <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <span id="counter" class="text-sm font-medium text-slate-600">Tarjeta 1 de X</span>
+            <button onclick="shuffleCards()" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded-md transition">
+                Mezclar
+            </button>
+        </div>
+
+        <!-- Card Container -->
+        <div id="card-element" class="flip-card mb-8" onclick="toggleFlip()">
+            <div class="flip-card-inner">
+                <div class="flip-card-front">
+                    <p id="question-text" class="text-xl font-semibold leading-relaxed"></p>
+                </div>
+                <div class="flip-card-back">
+                    <p id="answer-text" class="text-lg leading-relaxed"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex justify-center gap-4">
+            <button onclick="prevCard()" class="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-6 py-2 rounded-lg font-medium transition flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="15 19l-7-7 7-7" /></svg>
+                Anterior
+            </button>
+            <button onclick="nextCard()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-medium transition flex items-center shadow-lg shadow-blue-200">
+                Siguiente
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="9 5l7 7-7 7" /></svg>
+            </button>
+        </div>
+        
+        <p class="text-center mt-6 text-xs text-slate-400">Haz clic en la tarjeta para ver la respuesta</p>
+    </div>
+
+    <script>
+        const flashcards = [
+            {
+                q: "¿Qué es un protocolo?",
+                a: "Es un conjunto de reglas y estándares que rigen la comunicación entre dos o más entidades en una red para asegurar que el intercambio de datos sea comprensible y ordenado."
+            },
+            {
+                q: "¿Cuáles son las capas del modelo OSI en orden?",
+                a: "1. Física, 2. Enlace de Datos, 3. Red, 4. Transporte, 5. Sesión, 6. Presentación, 7. Aplicación."
+            },
+            {
+                q: "Define X.25 y su modo de conexión",
+                a: "Es un estándar de la ITU-T para redes de área amplia (WAN) de conmutación de paquetes. Utiliza un modo de conexión <strong>orientado a conexión</strong>."
+            },
+            {
+                q: "¿Cuál capa del modelo OSI se encarga del significado de los datos?",
+                a: "La <strong>Capa de Presentación</strong> (Capa 6). Se encarga de la sintaxis y la semántica de la información transmitida."
+            },
+            {
+                q: "¿Qué es ATM?",
+                a: "Asynchronous Transfer Mode (Modo de Transferencia Asíncrona). Es una tecnología de red basada en celdas de tamaño fijo (53 bytes) que combina la eficiencia de la conmutación de paquetes con la previsibilidad de la conmutación de circuitos."
+            },
+            {
+                q: "¿Qué es SONET y por cuántos bytes está formado?",
+                a: "Synchronous Optical Networking. Es un estándar para la transmisión óptica de datos. Su trama básica (STS-1) está formada por <strong>810 bytes</strong> (9 filas por 90 columnas)."
+            },
+            {
+                q: "¿Qué es latencia?",
+                a: "Es el tiempo de retraso que experimenta un mensaje desde que se envía por el origen hasta que es recibido por el destino."
+            },
+            {
+                q: "Menciona dos ventajas del modelo Cliente-Servidor",
+                a: "1. Centralización del control (recursos y seguridad).<br>2. Escalabilidad (es fácil añadir clientes o mejorar el servidor)."
+            },
+            {
+                q: "Menciona las capas del modelo cliente servidor y su relación con el modelo OSI",
+                a: "Suele dividirse en: Interfaz de usuario, Lógica de negocio y Almacenamiento de datos. Se relacionan principalmente con las capas superiores de OSI (Sesión, Presentación y Aplicación)."
+            },
+            {
+                q: "¿Cuáles son los aspectos de diseño del modelo cliente-servidor?",
+                a: "Direccionamiento, Primitivas de servicio (bloqueantes/no bloqueantes), Fiabilidad (confiable/no confiable) y el manejo de errores."
+            },
+            {
+                q: "¿En qué consiste el direccionamiento MACHINE.PROCESS?",
+                a: "Identifica un destino mediante la dirección de red de la máquina y el número o ID específico del proceso que se ejecuta en ella."
+            },
+            {
+                q: "¿En qué consiste el direccionamiento MACHINE.LOCAL-ID?",
+                a: "Identifica el destino usando la dirección de la máquina y un identificador local (como un puerto o buzón) que no depende necesariamente de un ID de proceso dinámico."
+            },
+            {
+                q: "¿Qué es un servidor de nombres?",
+                a: "Es un servicio que traduce nombres lógicos (legibles para humanos) en direcciones físicas o de red para localizar servicios o máquinas."
+            },
+            {
+                q: "Describe el funcionamiento de primitivas con bloqueo y sin bloqueo",
+                a: "<strong>Bloqueo:</strong> El emisor se detiene hasta recibir confirmación.<br><strong>Sin bloqueo:</strong> El emisor envía el mensaje y continúa su ejecución inmediatamente."
+            },
+            {
+                q: "Describe el funcionamiento de primitivas no almacenadas",
+                a: "El mensaje se envía directamente al receptor. Si el receptor no está listo para recibirlo en ese instante, el mensaje se pierde."
+            },
+            {
+                q: "Describe el funcionamiento de primitivas almacenadas",
+                a: "Utilizan un 'buffer' o memoria intermedia donde el mensaje se guarda hasta que el receptor esté listo para procesarlo."
+            },
+            {
+                q: "¿Qué es un buzón?",
+                a: "Es una estructura de almacenamiento temporal en la red (o en el servidor) que permite la comunicación indirecta: el emisor pone mensajes y el receptor los recoge."
+            },
+            {
+                q: "¿Qué es una primitiva confiable y qué es una no confiable?",
+                a: "<strong>Confiable:</strong> Garantiza que el mensaje llegue (usa ACKs y reintentos).<br><strong>No confiable:</strong> Envía el mensaje sin verificar si llegó (Best Effort)."
+            },
+            {
+                q: "¿Qué es un reconocimiento?",
+                a: "Es un mensaje corto (ACK) enviado por el receptor al emisor para confirmar que un paquete de datos llegó correctamente."
+            },
+            {
+                q: "Enlista los tipos de paquetes utilizados en el protocolo cliente-servidor",
+                a: "Request (Solicitud), Reply (Respuesta), Acknowledge (Reconocimiento) y Error."
+            },
+            {
+                q: "¿Qué es RPC?",
+                a: "Remote Procedure Call (Llamada a Procedimiento Remoto). Es una técnica que permite a un programa ejecutar código en otra máquina como si fuera una función local."
+            },
+            {
+                q: "¿Cómo funciona RPC?",
+                a: "El cliente llama a un 'stub' local, este empaqueta los parámetros, los envía al servidor, el servidor ejecuta la función y devuelve el resultado de forma transparente."
+            },
+            {
+                q: "¿Cuántos y cuáles son los modos de transferencia de parámetros?",
+                a: "Principalmente 3: Por valor, por referencia (complejo en redes) y por copia-restauración."
+            },
+            {
+                q: "¿Cuáles son los pasos para generar una llamada a un procedimiento remoto?",
+                a: "1. Llamada al stub del cliente.<br>2. Marshalling (empaquetado).<br>3. Envío por red.<br>4. Unmarshalling en el servidor.<br>5. Ejecución del procedimiento.<br>6. Respuesta inversa."
+            },
+            {
+                q: "¿Cómo es la comunicación en grupo?",
+                a: "Es cuando un proceso envía un mensaje a un conjunto de destinos simultáneamente (Multicast) o a todos (Broadcast), útil para sistemas distribuidos y replicación."
+            }
+        ];
+
+        let currentIndex = 0;
+        const cardElement = document.getElementById('card-element');
+        const questionText = document.getElementById('question-text');
+        const answerText = document.getElementById('answer-text');
+        const counterText = document.getElementById('counter');
+        const progressBar = document.getElementById('progress-bar');
+
+        function updateCard() {
+            // Reset flip state before changing content
+            cardElement.classList.remove('flipped');
+            
+            setTimeout(() => {
+                const current = flashcards[currentIndex];
+                questionText.innerHTML = current.q;
+                answerText.innerHTML = current.a;
+                counterText.innerText = `Tarjeta ${currentIndex + 1} de ${flashcards.length}`;
+                
+                const progress = ((currentIndex + 1) / flashcards.length) * 100;
+                progressBar.style.width = `${progress}%`;
+            }, 150);
+        }
+
+        function toggleFlip() {
+            cardElement.classList.toggle('flipped');
+        }
+
+        function nextCard() {
+            currentIndex = (currentIndex + 1) % flashcards.length;
+            updateCard();
+        }
+
+        function prevCard() {
+            currentIndex = (currentIndex - 1 + flashcards.length) % flashcards.length;
+            updateCard();
+        }
+
+        function shuffleCards() {
+            for (let i = flashcards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
+            }
+            currentIndex = 0;
+            updateCard();
+        }
+
+        // Initialize
+        updateCard();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextCard();
+            if (e.key === 'ArrowLeft') prevCard();
+            if (e.key === 'Enter') toggleFlip();
+        });
+    </script>
+</body>
+</html>

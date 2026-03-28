@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards de Redes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .flip-card {
+            background-color: transparent;
+            perspective: 1000px;
+            height: 350px;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .flip-card.flipped .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .flip-card-front {
+            background-color: #ffffff;
+            color: #1e293b;
+            border: 2px solid #e2e8f0;
+        }
+        .flip-card-back {
+            background-color: #3b82f6;
+            color: white;
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center py-10 px-4 font-sans">
+
+    <div class="max-w-2xl w-full">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-slate-800">Flashcards de Estudio</h1>
+            <p class="text-slate-500">Sincronización, Algoritmos y Transacciones</p>
+            <p class="text-slate-500">Actividad de Cierre 4</p>
+        </header>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-200 rounded-full h-2.5 mb-6">
+            <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <span id="counter" class="text-sm font-medium text-slate-600">Tarjeta 1 de X</span>
+            <button onclick="shuffleCards()" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded-md transition">
+                Mezclar
+            </button>
+        </div>
+
+        <!-- Card Container -->
+        <div id="card-element" class="flip-card mb-8" onclick="toggleFlip()">
+            <div class="flip-card-inner">
+                <div class="flip-card-front">
+                    <p id="question-text" class="text-xl font-semibold leading-relaxed"></p>
+                </div>
+                <div class="flip-card-back">
+                    <p id="answer-text" class="text-lg leading-relaxed"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex justify-center gap-4">
+            <button onclick="prevCard()" class="bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 px-6 py-2 rounded-lg font-medium transition flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="15 19l-7-7 7-7" /></svg>
+                Anterior
+            </button>
+            <button onclick="nextCard()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-medium transition flex items-center shadow-lg shadow-blue-200">
+                Siguiente
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="9 5l7 7-7 7" /></svg>
+            </button>
+        </div>
+        
+        <p class="text-center mt-6 text-xs text-slate-400">Haz clic en la tarjeta para ver la respuesta</p>
+    </div>
+
+    <script>
+        const flashcards = [
+            // Preguntas sugeridas
+            { q: "¿Cuáles son los tipos de relojes?", a: "Se dividen principalmente en Relojes Físicos (miden tiempo real, ej. osciladores de cuarzo, atómicos) y Relojes Lógicos (miden el orden de los eventos)." },
+            { q: "¿Qué es y para qué sirve la sincronización?", a: "Es el proceso de coordinar el tiempo o el orden de eventos en múltiples nodos. Sirve para asegurar la consistencia, el ordenamiento de mensajes y la integridad de los datos." },
+            { q: "¿Cuáles son los algoritmos de sincronización?", a: "Existen algoritmos externos (Cristian, NTP) e internos (Berkeley). También están los lógicos como Lamport y Relojes Vectoriales." },
+            { q: "¿Cuáles son los algoritmos de elección?", a: "Los más comunes son el Algoritmo del Grandulón (Bully Algorithm) y el Algoritmo en Anillo (Ring Algorithm)." },
+            { q: "¿Qué es una transacción atómica?", a: "Es una secuencia de operaciones que se ejecutan como una única unidad: o se realizan todas con éxito (commit) o no se realiza ninguna (abort/rollback)." },
+            { q: "¿Cuáles son las características principales del algoritmo de Lamport?", a: "Usa la relación 'sucede antes que' (->), no requiere relojes físicos sincronizados y permite un ordenamiento parcial de eventos basado en causalidad." },
+            { q: "¿Cuáles son las condiciones para la asignación de un tiempo en el algoritmo Lamport?", a: "1. Si a y b son del mismo proceso y a ocurre antes que b, C(a) < C(b). 2. Si a es el envío de un mensaje y b su recepción, C(a) < C(b). 3. Siempre C(e) = C(e) + d." },
+            { q: "¿Mensajes por dato/Salida, retraso y problema principal del Anillo de fichas?", a: "Mensajes: 1 a infinito (si no hay datos). Retraso: 0 a n-1. Problema principal: Si la ficha (token) se pierde, el sistema se detiene y requiere una regeneración compleja." },
+            { q: "¿Cuáles son los dos algoritmos de elección?", a: "El algoritmo del Matón (Bully) y el basado en Anillo (Ring)." },
+            { q: "¿Qué es una transacción atómica? (Refuerzo)", a: "Es una operación 'todo o nada'. Sus propiedades se resumen en ACID: Atomicidad, Consistencia, Aislamiento (Isolation) y Durabilidad." },
+
+            // 20 Preguntas de elaboración propia
+            { q: "¿Qué es el 'Clock Drift' o deriva del reloj?", a: "Es el fenómeno donde los relojes físicos de distintos nodos divergen con el tiempo debido a pequeñas variaciones en la frecuencia de sus osciladores." },
+            { q: "¿Cuál es la diferencia entre ordenamiento parcial y total?", a: "El parcial solo ordena eventos causalmente relacionados; el total asigna un orden único a todos los eventos del sistema (ej. usando IDs de proceso para desempatar)." },
+            { q: "¿Cómo funciona el algoritmo de Cristian?", a: "Un cliente solicita la hora a un servidor de tiempo. El cliente ajusta su reloj sumando a la hora recibida la mitad del tiempo de ida y vuelta (RTT)." },
+            { q: "¿Qué es el algoritmo de Berkeley?", a: "Un servidor maestro hace un muestreo de los relojes de los esclavos, calcula un promedio (eliminando valores atípicos) y envía a cada uno el ajuste necesario." },
+            { q: "¿Qué ventaja tienen los Relojes Vectoriales sobre los de Lamport?", a: "Los Relojes Vectoriales permiten detectar si dos eventos son concurrentes o tienen una relación causal, cosa que Lamport no puede asegurar al 100%." },
+            { q: "¿Qué significa que un algoritmo de exclusión mutua sea 'distribuido'?", a: "Significa que no hay un coordinador central; la decisión de entrar a la sección crítica se toma mediante el consenso o intercambio de mensajes entre todos los nodos." },
+            { q: "¿En qué consiste el algoritmo de Ricart y Agrawala?", a: "Un proceso que quiere entrar a una sección crítica envía un mensaje con timestamp a todos. Entra solo cuando recibe el OK de todos los demás participantes." },
+            { q: "¿Qué es una sección crítica?", a: "Es un segmento de código que accede a un recurso compartido y que no debe ser ejecutado por más de un proceso a la vez." },
+            { q: "¿Cuál es el objetivo principal del Algoritmo del Grandulón (Bully)?", a: "Seleccionar al proceso con el identificador (ID) más alto disponible como el nuevo coordinador del sistema." },
+            { q: "¿Qué sucede en el Algoritmo en Anillo si un nodo falla durante la elección?", a: "El nodo anterior detecta la falla, salta el nodo caído en la estructura lógica del anillo y envía el mensaje al siguiente nodo activo." },
+            { q: "¿Qué es el Protocolo de Compromiso de Dos Fases (2PC)?", a: "Un algoritmo para asegurar la atomicidad en transacciones distribuidas. Fases: 1. Votación/Preparación, 2. Decisión (Commit o Abort)." },
+            { q: "¿Qué es el 'Skew' del reloj?", a: "Es la diferencia instantánea de tiempo entre dos relojes específicos en un momento dado." },
+            { q: "¿Qué garantiza la propiedad de 'Durabilidad' en una transacción?", a: "Garantiza que una vez que la transacción se ha completado (commit), sus efectos persistirán incluso en caso de un fallo del sistema." },
+            { q: "¿Qué es el Tiempo Atómico Internacional (TAI)?", a: "Un estándar de tiempo basado en el promedio de más de 400 relojes atómicos en todo el mundo, extremadamente preciso." },
+            { q: "¿Cuál es la función del protocolo NTP?", a: "Sincronizar los relojes de computadoras a través de redes con latencia variable, organizando los servidores en capas llamadas 'strata'." },
+            { q: "¿Qué es un interbloqueo (Deadlock) distribuido?", a: "Una situación donde un grupo de procesos están bloqueados esperando recursos que poseen otros procesos del mismo grupo en diferentes nodos." },
+            { q: "¿Qué es la exclusión mutua centralizada?", a: "Un esquema donde un solo proceso (coordinador) gestiona las peticiones de entrada a la sección crítica mediante una cola de espera." },
+            { q: "¿Cuál es el problema del 'coordinador único' en sistemas distribuidos?", a: "Representa un punto único de fallo (SPOF); si el coordinador cae, todo el mecanismo de control se detiene hasta que se elija uno nuevo." },
+            { q: "¿Qué es la 'Consistencia Eventual'?", a: "Un modelo de consistencia donde se garantiza que, si no hay nuevas actualizaciones, eventualmente todos los nodos tendrán el mismo valor." },
+            { q: "¿Qué es la tolerancia a fallos bizantinos?", a: "La capacidad de un sistema para alcanzar un consenso incluso cuando algunos nodos envían información contradictoria o maliciosa deliberadamente." }
+        ];
+
+        let currentIndex = 0;
+        const cardElement = document.getElementById('card-element');
+        const questionText = document.getElementById('question-text');
+        const answerText = document.getElementById('answer-text');
+        const counterText = document.getElementById('counter');
+        const progressBar = document.getElementById('progress-bar');
+
+        function updateCard() {
+            // Reset flip state before changing content
+            cardElement.classList.remove('flipped');
+            
+            setTimeout(() => {
+                const current = flashcards[currentIndex];
+                questionText.innerHTML = current.q;
+                answerText.innerHTML = current.a;
+                counterText.innerText = `Tarjeta ${currentIndex + 1} de ${flashcards.length}`;
+                
+                const progress = ((currentIndex + 1) / flashcards.length) * 100;
+                progressBar.style.width = `${progress}%`;
+            }, 150);
+        }
+
+        function toggleFlip() {
+            cardElement.classList.toggle('flipped');
+        }
+
+        function nextCard() {
+            currentIndex = (currentIndex + 1) % flashcards.length;
+            updateCard();
+        }
+
+        function prevCard() {
+            currentIndex = (currentIndex - 1 + flashcards.length) % flashcards.length;
+            updateCard();
+        }
+
+        function shuffleCards() {
+            for (let i = flashcards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
+            }
+            currentIndex = 0;
+            updateCard();
+        }
+
+        // Initialize
+        updateCard();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextCard();
+            if (e.key === 'ArrowLeft') prevCard();
+            if (e.key === 'Enter') toggleFlip();
+        });
+    </script>
+</body>
+</html>
